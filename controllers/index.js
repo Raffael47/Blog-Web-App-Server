@@ -1,0 +1,9 @@
+const blogController = require('./blogController');
+const authController = require('./authController');
+const userController = require('./userController');
+
+module.exports = {
+    blogController,
+    authController,
+    userController
+};
