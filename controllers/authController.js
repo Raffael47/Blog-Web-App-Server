@@ -32,7 +32,7 @@ module.exports = {
             const result = await user.create({username, email, phone, password: hashPassword});
             
             const payload = {id: result.id};
-            const token = jwt.sign(payload, process.env.KEY_JWT, { expiresIn: null });
+            const token = jwt.sign(payload, process.env.KEY_JWT);
             
             await user.update({ token }, { where: { username } })
             
@@ -96,9 +96,14 @@ module.exports = {
             const result = await user.findOne({
                 where: {
                     [Op.or]: [{username: data}, {email: data}, {phone: data}]
+                },
+                attributes: {
+                    exclude: [
+                        'token',
+                        'updatedAt'
+                    ]
                 }
             });
-            console.log(result)
 
             if ( !result.isVerified ) throw { message: 'Account unverified' };
 
@@ -108,7 +113,7 @@ module.exports = {
             if (!isValid) throw {message: 'Password is incorrect, please check again your password'};
 
             const payload = {id: result.id, isVerified: result.isVerified};
-            const token = jwt.sign(payload, process.env.KEY_JWT, {expiresIn: '1h'});
+            const token = jwt.sign(payload, process.env.KEY_JWT, {expiresIn: '1d'});
 
             res.status(200).send({
                 status: true,
@@ -118,6 +123,7 @@ module.exports = {
             });
 
         } catch (err) {
+            console.log(err)
             res.status(400).send(err);
         }
     },
@@ -127,6 +133,14 @@ module.exports = {
             const result = await user.findOne({
                 where: {
                     id: req.user.id
+                },
+                attributes: {
+                    exclude: [
+                        'token',
+                        'updatedAt',
+                        'password',
+                        'isVerified'
+                    ]
                 }
             });
             

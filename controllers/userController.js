@@ -139,7 +139,7 @@ module.exports = {
             });
 
             const isValid = await bcrypt.compare(currentPassword, result.password);
-            if (!isValid) res.status(401).send({message: 'Password is incorrect, please check again your password'});
+            if (!isValid) throw {message: 'Password is incorrect, please check again your password'};
 
             const salt = await bcrypt.genSalt(8);
             const hashPassword = await bcrypt.hash(password, salt);

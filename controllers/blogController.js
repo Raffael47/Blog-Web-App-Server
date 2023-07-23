@@ -30,7 +30,7 @@ module.exports = {
                         attributes: ['username', 'imgProfile'],
                         where: {
                             username: {
-                                [Op.like]: `%${author}%`
+                                [Op.like]: `${author}%`
                             }
                         }
                     },
@@ -112,10 +112,12 @@ module.exports = {
             }, { transaction });
 
             const array = keyword.split(';');
-            array.forEach(async el => {
+            for (const el of array) {
                 const [key] = await keywordData.findOrCreate({ where: { keyword: el }, transaction })
                 await blog_keyword.create({ blogId: result.id, keywordId: key.id}, { transaction })
-            });
+            }
+
+            await transaction.commit();
 
             res.status(201).send({
                 status: true,
@@ -125,6 +127,7 @@ module.exports = {
             });
 
         } catch (err) {
+            await transaction.rollback();
             res.status(400).send(err);
         };
     },
@@ -374,7 +377,7 @@ module.exports = {
                 }
             });
 
-            res.status(200).send({
+            res.status(201).send({
                 status: true,
                 message: 'Blog liked'
             });
@@ -387,71 +390,68 @@ module.exports = {
 
     getLikedBlog: async(req, res) => {
         try {
-            const page = +req.query.page || 1;
-            const limit = +req.query.limit || 10;
             const search = req.query.search || "";
             const id_cat = req.query.id_cat || "";
+            const sort = req.query.sort || "ASC";
             const author = req.query.author || "";
 
             const result = await liked_blog.findAll({
                 include: [
                     {
                         model: blog,
-                        // include: [
-                        //     {
-                        //         model: category,
-                        //         attributes: ['name']
-                        //     },
-                        //     {
-                        //         model: user,
-                        //         attributes: ['username', 'imgProfile'],
-                        //         where: {
-                        //             username: {
-                        //                 [Op.like]: `%${author}%`
-                        //             }
-                        //         }
-                        //     },
-                        //     {
-                        //         model: keywordData,
-                        //         attributes: ['keyword'],
-                        //         through: {
-                        //             attributes: []
-                        //         }
-                        //     },
-                        //     {
-                        //         model: liked_blog,
-                        //         attributes: [
-                        //             'userId'
-                        //         ],
-                        //         as: 'userLikes'
-                        //     }
-                        // ],
-                        // limit,
-                        // attributes: {
-                        //     include: [
-                        //         [
-                        //             Sequelize.literal(`(
-                        //                 SELECT COUNT(liked_blogs.userId) 
-                        //                 FROM liked_blogs
-                        //                 WHERE blog.id = liked_blogs.blogId 
-                        //                 GROUP BY blogId
-                        //             )`), 
-                        //             'totalLikes'
-                        //         ]
-                        //     ]
-                        // },
-                        // offset: (page - 1) * limit,
-                        // where: {
-                        //     title: {
-                        //         [Op.like]: `%${search}%`
-                        //     },
-                        //     categoryId: {
-                        //         [Op.like]: `%${id_cat}%`
-                        //     }
-                        // },
-                        // order: [
-                        //     [Sequelize.col('createdAt'), `${ sort }` ]
-                        // ]
+                        include: [
+                            {
+                                model: category,
+                                attributes: ['name']
+                            },
+                            {
+                                model: user,
+                                attributes: ['username', 'imgProfile'],
+                                where: {
+                                    username: {
+                                        [Op.like]: `${author}%`
+                                    }
+                                }
+                            },
+                            {
+                                model: keywordData,
+                                attributes: ['keyword'],
+                                through: {
+                                    attributes: []
+                                }
+                            },
+                            {
+                                model: liked_blog,
+                                attributes: [
+                                    'userId'
+                                ],
+                                as: 'userLikes'
+                            }
+                        ],
+                        attributes: {
+                            include: [
+                                [
+                                    Sequelize.literal(`(
+                                        SELECT COUNT(liked_blogs.userId) 
+                                        FROM liked_blogs
+                                        WHERE blog.id = liked_blogs.blogId 
+                                        GROUP BY blogId
+                                    )`), 
+                                    'totalLikes'
+                                ]
+                            ]
+                        },
+                        where: {
+                            title: {
+                                [Op.like]: `%${search}%`
+                            },
+                            categoryId: {
+                                [Op.like]: `%${id_cat}%`
+                            }
+                        },
+                        order: [
+                            [Sequelize.col('createdAt'), `${ sort }` ]
+                        ]
                     },
                     { model: user, attributes: [] }
                 ],
